@@ -2,22 +2,32 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Aptitude Test</title>
-  <meta name="description" content="A 1-hour aptitude test: verbal fluency, number memory, maths, logic, visual reasoning, symbol matching, dot sequences and vocabulary, with step-by-step explanations.">
+  <meta name="description" content="A 1-hour aptitude test with an AI coach that guides your thinking: verbal fluency, number memory, maths, logic, visual reasoning, symbol matching, dot sequences and vocabulary.">
+  <meta name="theme-color" content="#faf9f5" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#262624" media="(prefers-color-scheme: dark)">
+  <meta name="mobile-web-app-capable" content="yes">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <header id="hdr" class="hdr" hidden>
-    <button id="hdr-home" class="link" title="Back to start">⌂</button>
+    <button id="hdr-home" class="icon-btn" title="Back to start" aria-label="Back to start">⌂</button>
     <span id="hdr-section" class="sec"></span>
     <span id="hdr-timer" class="timer"></span>
     <span id="hdr-total" class="total"></span>
-    <button id="hdr-skip" class="link" hidden>Skip section</button>
+    <button id="hdr-skip" class="link" hidden>Skip</button>
+    <button id="hdr-settings" class="icon-btn" title="Settings" aria-label="Settings">⚙</button>
   </header>
   <main id="app"></main>
+  <dialog id="settings"></dialog>
   <noscript>This test needs JavaScript enabled.</noscript>
   <script src="questions.js"></script>
+  <script src="coach.js"></script>
+  <script src="scratch.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

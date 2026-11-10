@@ -45,10 +45,10 @@
 
   // ---------- visual reasoning generator ----------
   const SHAPES = [
-    { cells: [[2, 1], [3, 1], [1, 2], [2, 2], [2, 3]], color: 'var(--c1)' },
-    { cells: [[2, 0], [2, 1], [2, 2], [2, 3], [3, 3]], color: 'var(--c2)' },
-    { cells: [[2, 0], [2, 1], [2, 2], [1, 2], [1, 3]], color: 'var(--c3)' },
-    { cells: [[1, 1], [2, 1], [1, 2], [2, 2], [1, 3]], color: 'var(--c4)' },
+    { name: 'F-shaped pentomino (5 squares)', cells: [[2, 1], [3, 1], [1, 2], [2, 2], [2, 3]], color: 'var(--c1)' },
+    { name: 'L-shaped pentomino (4 squares in a line with a foot)', cells: [[2, 0], [2, 1], [2, 2], [2, 3], [3, 3]], color: 'var(--c2)' },
+    { name: 'N/S-shaped pentomino', cells: [[2, 0], [2, 1], [2, 2], [1, 2], [1, 3]], color: 'var(--c3)' },
+    { name: 'P-shaped pentomino (a 2x2 block with one extra square)', cells: [[1, 1], [2, 1], [1, 2], [2, 2], [1, 3]], color: 'var(--c4)' },
   ];
   const cellsSVG = (shape, rot, mirror) => {
     const t = `rotate(${rot} 50 50)` + (mirror ? ' translate(100 0) scale(-1 1)' : '');
@@ -66,6 +66,9 @@
       figure: `<div class="target"><span>Target</span>${cellsSVG(shape, 0, false)}</div>`,
       options: opts.map((o) => cellsSVG(shape, o.rot, !o.ok)),
       answer,
+      describe: `Shape-rotation question. The target is an ${shape.name}. The learner must pick the option that is the target only rotated, not mirrored. ` +
+        opts.map((o, k) => `Option ${LETTERS[k]}: ${o.ok ? `the target rotated ${o.rot}° clockwise` : `a MIRROR image of the target, then turned ${o.rot}°`}.`).join(' ') +
+        ' Good method: track one distinctive square (the nub) while mentally rotating; mirror images can never be matched by rotation.',
       steps: [
         'Flipped (mirror-image) shapes look similar but can never be matched just by turning, like your left and right glove.',
         `Option ${LETTERS[answer]} is the target turned ${rot}° clockwise.`,
@@ -79,6 +82,8 @@
   const qmark = `<svg viewBox="0 0 60 60" class="fig sm" aria-hidden="true"><rect x="2" y="2" width="56" height="56" rx="5" class="frame dashed"/><text x="30" y="40" text-anchor="middle" class="qm">?</text></svg>`;
   const seqFigure = (frames) => `<div class="seqrow">${frames.join('<span class="arrow">→</span>')}<span class="arrow">→</span>${qmark}</div>`;
 
+  const QN = { TL: 'top-left', TR: 'top-right', BR: 'bottom-right', BL: 'bottom-left' };
+  const posName = ([x, y]) => (x === 1 && y === 1 ? 'centre' : `${['top', 'middle', 'bottom'][y]}-${['left', 'middle', 'right'][x]}`);
   function patternQuestions() {
     // P1: dot moving clockwise around the edge of a 3x3 grid
     const P = [[0, 0], [1, 0], [2, 0], [2, 1], [2, 2], [1, 2], [0, 2], [0, 1]];
@@ -114,6 +119,7 @@
         visual: true, q: 'Which picture comes next in the pattern?',
         figure: seqFigure([0, 1, 2, 3].map((i) => dotAt(P[i]))),
         options: p1opts.map((o) => dotAt(o.p)), answer: p1opts.findIndex((o) => o.ok),
+        describe: 'Picture sequence on a 3x3 grid. Frame 1: dot top-left. Frame 2: top-middle. Frame 3: top-right. Frame 4: middle-right. What comes next? Options: ' + p1opts.map((o, k) => `${LETTERS[k]}) dot at ${posName(o.p)}`).join('; ') + '.',
         steps: ['The dot moves one square at a time around the outside edge: top-left → top-middle → top-right → middle-right.', 'It is going clockwise, so the next square is <strong>bottom-right</strong>.'],
         trick: 'Describe each step in words (“moves one right”) and repeat that rule once more.',
       },
@@ -121,6 +127,7 @@
         visual: true, q: 'Which picture comes next in the pattern?',
         figure: seqFigure([0, 45, 90, 135].map(arrow)),
         options: p2opts.map((o) => arrow(o.a)), answer: p2opts.findIndex((o) => o.ok),
+        describe: 'Picture sequence of an arrow. Frame 1 points up (0°), frame 2 up-right (45°), frame 3 right (90°), frame 4 down-right (135°). What comes next? Options: ' + p2opts.map((o, k) => `${LETTERS[k]}) arrow turned ${o.a}° from up`).join('; ') + '.',
         steps: ['The arrow turns an eighth of a circle (45°) clockwise each time: up → up-right → right → down-right.', 'Next is <strong>straight down</strong> (180°).'],
         trick: 'For rotations, work out the turn per step (here 45°) and add it once more.',
       },
@@ -128,6 +135,7 @@
         visual: true, q: 'Which picture comes next in the pattern?',
         figure: seqFigure([3, 4, 5, 6].map(poly)),
         options: p3opts.map((o) => poly(o.n)), answer: p3opts.findIndex((o) => o.ok),
+        describe: 'Picture sequence of shapes: triangle, square, pentagon, hexagon. What comes next? Options: ' + p3opts.map((o, k) => `${LETTERS[k]}) a ${o.n}-sided shape`).join('; ') + '. (The learner sees pictures and must count sides.)',
         steps: ['Count the sides: triangle (3), square (4), pentagon (5), hexagon (6).', 'One side is added each time, so next is a <strong>7-sided shape</strong> (heptagon).'],
         trick: 'When shapes change, count something: sides, dots, lines or corners.',
       },
@@ -135,6 +143,7 @@
         visual: true, q: 'Two things change at once. Which picture comes next?',
         figure: seqFigure([['TL', 1], ['TR', 2], ['BR', 3], ['BL', 4]].map(([q, n]) => quad(q, n))),
         options: p4opts.map((o) => quad(o.q, o.n)), answer: p4opts.findIndex((o) => o.ok),
+        describe: 'Picture sequence: a square split into 4 quarters, one quarter shaded, plus dots in the middle. Frame 1: top-left shaded, 1 dot. Frame 2: top-right, 2 dots. Frame 3: bottom-right, 3 dots. Frame 4: bottom-left, 4 dots. What comes next? Options: ' + p4opts.map((o, k) => `${LETTERS[k]}) ${QN[o.q]} shaded with ${o.n} dots`).join('; ') + '.',
         steps: ['Rule 1: the shaded quarter moves clockwise: top-left → top-right → bottom-right → bottom-left → back to <strong>top-left</strong>.', 'Rule 2: the number of dots goes up by one: 1, 2, 3, 4 → <strong>5</strong>.', 'Only one option has both: top-left shaded with 5 dots.'],
         trick: 'Track each changing feature separately, then find the option that satisfies all the rules.',
       },
@@ -170,6 +179,49 @@
       intro: 'Short written answers to discuss with the assessor afterwards. There are no right or wrong answers. Be honest and specific.' },
   ];
 
+  // ---------- coach key setup & settings ----------
+  function renderCoachSetup() {
+    const el = $('#coach-setup');
+    if (!el) return;
+    if (window.Coach.getKey()) {
+      el.innerHTML = `<div class="coach-ok"><span class="spark">✳</span><span><strong>AI coach is on.</strong> Find it under every question: share your thinking and it guides you without giving the answer away.</span><button class="link" id="open-settings">Settings</button></div>`;
+      $('#open-settings').onclick = openSettings;
+    } else {
+      el.innerHTML = `<div class="coach-card"><p class="coach-title"><span class="spark">✳</span> Turn on the AI coach</p><p class="small">A coach under every question checks your reasoning and nudges you toward the answer. Paste your DeepSeek API key once; it stays on this device.</p>${window.Coach.keyFormHTML(true)}<button class="link small" id="skip-key">Continue without coach</button></div>`;
+      window.Coach.bindKeyForm(el.querySelector('[data-keyform]'), renderCoachSetup);
+      $('#skip-key').onclick = () => { el.innerHTML = ''; };
+    }
+  }
+
+  function openSettings() {
+    const dlg = $('#settings');
+    const key = window.Coach.getKey();
+    dlg.innerHTML = `
+      <div class="settings">
+        <h2>Settings</h2>
+        <p class="small muted">AI coach (DeepSeek). The key is stored only in this browser.</p>
+        <p>${key ? `Key saved: <code>${esc(key.slice(0, 5))}…${esc(key.slice(-4))}</code>` : 'No key saved.'}</p>
+        <div id="settings-key">${window.Coach.keyFormHTML(true)}</div>
+        <label class="field"><span>Model</span>
+          <select id="model">
+            <option value="deepseek-chat">deepseek-chat (fast, recommended)</option>
+            <option value="deepseek-reasoner">deepseek-reasoner (thinks longer, slower)</option>
+          </select>
+        </label>
+        <div class="row gap">
+          ${key ? '<button type="button" class="btn" id="forget">Remove key</button>' : ''}
+          <button type="button" class="btn primary" id="done">Done</button>
+        </div>
+      </div>`;
+    $('#done', dlg).onclick = () => dlg.close();
+    $('#model', dlg).value = window.Coach.getModel();
+    $('#model', dlg).onchange = (e) => window.Coach.setModel(e.target.value);
+    window.Coach.bindKeyForm($('[data-keyform]', dlg), () => { openSettings(); renderCoachSetup(); });
+    const f = $('#forget', dlg);
+    if (f) f.onclick = () => { window.Coach.clearKey(); openSettings(); renderCoachSetup(); };
+    if (!dlg.open) dlg.showModal();
+  }
+
   // ---------- start screen ----------
   function home() {
     token++; stopCountdown(); skipFn = null; if (overall) clearInterval(overall);
@@ -187,9 +239,11 @@
           <label><input type="radio" name="mode" value="exam" checked> <span><strong>Exam</strong>: timed sections, answers and explanations at the end</span></label>
           <label><input type="radio" name="mode" value="practice"> <span><strong>Practice</strong>: no time limit on questions, explanation right after each answer</span></label>
         </fieldset>
-        <p class="tip">Before you start: find a quiet spot, have scrap paper and a pen ready, and allow an uninterrupted hour.</p>
+        <div class="coach-setup" id="coach-setup"></div>
+        <p class="tip">Before you start: find a quiet spot, keep your S Pen or scrap paper ready, and allow an uninterrupted hour.</p>
         <button class="btn primary big" id="go">Start test</button>
       </section>`;
+    renderCoachSetup();
     $('#go').onclick = () => {
       const chosen = $$('input[name=sec]:checked').map((i) => i.value);
       if (!chosen.length) { alert('Pick at least one section.'); return; }
@@ -237,6 +291,7 @@
   // ---------- multiple choice ----------
   const explain = (q) => `<ol class="steps">${q.steps.map((s) => `<li>${s}</li>`).join('')}</ol>${q.trick ? `<p class="trick"><strong>Simple trick:</strong> ${q.trick}</p>` : ''}`;
 
+  let scratchOpen = false;
   function runMCQ(sec, t, done) {
     const qs = sec.bank === 'visual' ? visualQuestions() : B[sec.bank];
     const answers = new Array(qs.length).fill(null);
@@ -251,13 +306,14 @@
 
     const render = () => {
       const q = qs[i];
+      const qi = i;
       const locked = practice && answers[i] !== null;
       const nav = practice
         ? `<span></span><button class="btn primary" id="next" ${locked ? '' : 'disabled'}>${i === qs.length - 1 ? 'Finish section' : 'Next →'}</button>`
         : `<button class="btn" id="prev" ${i === 0 ? 'disabled' : ''}>← Back</button>
            ${i === qs.length - 1 ? '<button class="btn primary" id="fin">Finish section</button>' : '<button class="btn primary" id="next">Next →</button>'}`;
-      paint(t, `
-        <section class="card">
+      if (!paint(t, `
+        <section class="card qcard">
           <p class="kicker">Question ${i + 1} of ${qs.length}</p>
           <div class="qtext">${q.q}</div>
           ${q.figure ? `<div class="figure">${q.figure}</div>` : ''}
@@ -269,10 +325,27 @@
             }).join('')}
           </div>
           ${locked ? `<div class="feedback ${answers[i] === q.answer ? 'ok' : 'bad'}"><p class="verdict">${answers[i] === q.answer ? '✅ Correct!' : `❌ Not quite. The answer is <strong>${LETTERS[q.answer]}</strong>.`}</p>${explain(q)}</div>` : ''}
-          <div class="nav">${nav}</div>
+          <div id="coach"></div>
+          <details class="scratch" ${scratchOpen ? 'open' : ''}><summary>✎ Scratch paper</summary><div id="scratch"></div></details>
           ${practice ? '' : `<div class="pips">${qs.map((_, k) => `<button class="pip ${k === i ? 'cur' : ''} ${answers[k] !== null ? 'done' : ''}" data-go="${k}" aria-label="Question ${k + 1}">${k + 1}</button>`).join('')}</div>`}
-        </section>`);
-      $$('.opt').forEach((b) => (b.onclick = () => { answers[i] = +b.dataset.k; render(); }));
+          <div class="nav">${nav}</div>
+        </section>`)) return;
+      window.Coach.mount($('#coach'), {
+        question: q, section: sec.title, defaultOpen: practice,
+        getSelected: () => answers[qi],
+        isAnswered: () => practice && answers[qi] !== null,
+      });
+      const sc = $('details.scratch');
+      const mountScratch = () => { if (sc.open && !sc.dataset.ready) { sc.dataset.ready = '1'; window.Scratch.mount($('#scratch'), q); } };
+      sc.addEventListener('toggle', () => { scratchOpen = sc.open; mountScratch(); });
+      mountScratch();
+      $$('.opt').forEach((b) => (b.onclick = () => {
+        answers[i] = +b.dataset.k;
+        if (practice) { render(); const fb = $('.feedback'); if (fb) fb.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+        // exam mode: update in place so the coach chat and scratch paper stay as they are
+        $$('.opt').forEach((x) => x.classList.toggle('sel', x === b));
+        const pip = $(`.pip[data-go="${i}"]`); if (pip) pip.classList.add('done');
+      }));
       $$('.pip').forEach((b) => (b.onclick = () => { i = +b.dataset.go; render(); }));
       const nx = $('#next'); if (nx) nx.onclick = () => { if (i === qs.length - 1) finish(); else { i++; render(); } };
       const pv = $('#prev'); if (pv) pv.onclick = () => { i--; render(); };
@@ -567,6 +640,7 @@
     };
   }
 
+  $('#hdr-settings').onclick = openSettings;
   $('#hdr-home').onclick = () => { if (confirm('Leave the test and return to the start? Progress will be lost.')) home(); };
   home();
 })();
