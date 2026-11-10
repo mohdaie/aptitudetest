@@ -143,6 +143,7 @@ input, textarea, select { font: inherit; color: var(--ink); }
 .fig .ink { fill: var(--ink); }
 .fig .ink-outline { fill: var(--accent-soft); stroke: var(--ink); stroke-width: 2; }
 .fig .shade { fill: var(--c1); opacity: .6; }
+.fig .cell { fill: none; stroke: var(--line); stroke-width: 1.2; }
 .fig .dot { fill: var(--ink); stroke: var(--card); stroke-width: 1; }
 .figure { margin: 0 0 18px; }
 .target { display: flex; align-items: center; gap: 12px; max-width: 240px; }

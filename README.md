@@ -18,6 +18,14 @@ A 1-hour aptitude test that runs in the browser. It needs no install and no buil
 | 8 | Words & meanings | 6 min | Synonyms, opposites, context, spelling, analogies |
 | 9 | Reflection | ~3 min | Written notes for the discussion with the assessor |
 
+## Fresh every attempt
+
+- **Maths (29 question types)** and most **logic** (truth/lie, seating, ordering, codes, directions, odd-one-out, letter series, days): generated with new numbers, names and layouts each time, with the answer and explanation worked out automatically.
+- **Hand-written pools:** 20 syllogisms, 12 if-then puzzles, 12 family riddles, and 240 vocabulary items (synonyms, opposites, meanings, spelling, analogies, odd-one-out). That's enough for 15 full tests with no repeated vocabulary.
+- **Visual:** random shapes, angles, mirror-image tasks and 5 kinds of picture pattern.
+- **Fluency:** random categories and a random letter.
+- Answer options are shuffled every time, and the questions you've seen least come first (tracked in your browser; reset under ⚙ Settings).
+
 ## AI coach (DeepSeek)
 
 Every question has a **Coach** panel. Tell it how you are thinking, and it says what's right, points to the first step that goes wrong, and asks a guiding question. It won't give the answer away until you've locked yours in.
@@ -40,7 +48,8 @@ You can tick or untick sections on the start screen to practise only some of the
 
 ## Files
 
-- `questions.js`: question bank with plain-language explanations (edit this to add questions)
+- `generators.js`: question generators for maths and logic
+- `questions.js`: hand-written question pools with plain-language explanations (edit this to add questions)
 - `coach.js`: AI coach (DeepSeek streaming chat, guiding prompt)
 - `scratch.js`: pen scratch paper
 - `app.js`: test engine (timers, memory tasks, visual question generator, results)

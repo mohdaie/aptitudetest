@@ -43,36 +43,48 @@
   // ---------- state ----------
   const state = { mode: 'exam', results: {}, started: 0, sections: [] };
 
-  // ---------- visual reasoning generator ----------
+  // ---------- visual reasoning generator (fresh shapes, angles and patterns every time) ----------
+  const pick = (a) => a[Math.floor(Math.random() * a.length)];
   const SHAPES = [
-    { name: 'F-shaped pentomino (5 squares)', cells: [[2, 1], [3, 1], [1, 2], [2, 2], [2, 3]], color: 'var(--c1)' },
-    { name: 'L-shaped pentomino (4 squares in a line with a foot)', cells: [[2, 0], [2, 1], [2, 2], [2, 3], [3, 3]], color: 'var(--c2)' },
-    { name: 'N/S-shaped pentomino', cells: [[2, 0], [2, 1], [2, 2], [1, 2], [1, 3]], color: 'var(--c3)' },
-    { name: 'P-shaped pentomino (a 2x2 block with one extra square)', cells: [[1, 1], [2, 1], [1, 2], [2, 2], [1, 3]], color: 'var(--c4)' },
+    { name: 'F-shaped pentomino (5 squares)', cells: [[2, 1], [3, 1], [1, 2], [2, 2], [2, 3]] },
+    { name: 'L-shaped pentomino (4 squares in a line with a foot)', cells: [[2, 0], [2, 1], [2, 2], [2, 3], [3, 3]] },
+    { name: 'N-shaped pentomino', cells: [[2, 0], [2, 1], [2, 2], [1, 2], [1, 3]] },
+    { name: 'P-shaped pentomino (a 2x2 block with one extra square)', cells: [[1, 1], [2, 1], [1, 2], [2, 2], [1, 3]] },
+    { name: 'Y-shaped pentomino (4 squares in a line with a bump on the side)', cells: [[2, 0], [2, 1], [2, 2], [2, 3], [1, 1]] },
+    { name: 'L-shaped tetromino (3 squares in a line with a foot)', cells: [[2, 1], [2, 2], [2, 3], [3, 3]] },
   ];
-  const cellsSVG = (shape, rot, mirror) => {
-    const t = `rotate(${rot} 50 50)` + (mirror ? ' translate(100 0) scale(-1 1)' : '');
+  const COLORS = ['var(--c1)', 'var(--c2)', 'var(--c3)', 'var(--c4)'];
+  const cellsSVG = (shape, color, rot, mirror) => {
+    const t = `rotate(${rot % 360} 50 50)` + (mirror ? ' translate(100 0) scale(-1 1)' : '');
     const rects = shape.cells.map(([x, y]) => `<rect x="${x * 16 + 10}" y="${y * 16 + 10}" width="16" height="16" rx="1.5"/>`).join('');
-    return `<svg viewBox="0 0 100 100" class="fig" aria-hidden="true"><g transform="${t}" fill="${shape.color}" stroke="var(--bg)" stroke-width="1.2">${rects}</g></svg>`;
+    return `<svg viewBox="0 0 100 100" class="fig" aria-hidden="true"><g transform="${t}" fill="${color}" stroke="var(--bg)" stroke-width="1.2">${rects}</g></svg>`;
   };
-  function rotationQuestion(shape) {
-    const rot = [90, 180, 270][Math.floor(Math.random() * 3)];
-    const mirrors = shuffle([0, 90, 180, 270]).slice(0, 3);
-    const opts = shuffle([{ ok: true, rot }, ...mirrors.map((r) => ({ ok: false, rot: r }))]);
+  function rotationQuestion(shape, color) {
+    const base = pick([0, 90, 180, 270]), bm = Math.random() < 0.5;
+    const findMirror = Math.random() < 0.35;
+    let opts;
+    if (!findMirror) {
+      const r = pick([90, 180, 270]);
+      opts = shuffle([{ ok: true, rot: r, m: false }, ...shuffle([0, 90, 180, 270]).slice(0, 3).map((x) => ({ ok: false, rot: x, m: true }))]);
+    } else {
+      opts = shuffle([...[90, 180, 270].map((x) => ({ ok: false, rot: x, m: false })), { ok: true, rot: pick([0, 90, 180, 270]), m: true }]);
+    }
     const answer = opts.findIndex((o) => o.ok);
+    const what = (o) => (o.m ? `a MIRROR image (flipped) of the target, turned ${o.rot}°` : `the target turned ${o.rot}° clockwise`);
     return {
       visual: true,
-      q: 'Which option is the <strong>same shape</strong> as the target, only <strong>turned</strong> (rotated), not flipped?',
-      figure: `<div class="target"><span>Target</span>${cellsSVG(shape, 0, false)}</div>`,
-      options: opts.map((o) => cellsSVG(shape, o.rot, !o.ok)),
+      q: findMirror
+        ? 'Three options are the target only <strong>turned</strong>. Which one is <strong>flipped</strong> (a mirror image)?'
+        : 'Which option is the <strong>same shape</strong> as the target, only <strong>turned</strong> (rotated), not flipped?',
+      figure: `<div class="target"><span>Target</span>${cellsSVG(shape, color, base, bm)}</div>`,
+      options: opts.map((o) => cellsSVG(shape, color, base + o.rot, o.m !== bm)),
       answer,
-      describe: `Shape-rotation question. The target is an ${shape.name}. The learner must pick the option that is the target only rotated, not mirrored. ` +
-        opts.map((o, k) => `Option ${LETTERS[k]}: ${o.ok ? `the target rotated ${o.rot}° clockwise` : `a MIRROR image of the target, then turned ${o.rot}°`}.`).join(' ') +
-        ' Good method: track one distinctive square (the nub) while mentally rotating; mirror images can never be matched by rotation.',
+      describe: `Shape-rotation question. The target is an ${shape.name}. ${findMirror ? 'The learner must find the one option that is a mirror image.' : 'The learner must pick the option that is only rotated, not mirrored.'} ` +
+        opts.map((o, k) => `Option ${LETTERS[k]}: ${what(o)}.`).join(' ') + ' Good method: track one distinctive square (the nub) while mentally rotating; mirror images can never be matched by rotation.',
       steps: [
         'Flipped (mirror-image) shapes look similar but can never be matched just by turning, like your left and right glove.',
-        `Option ${LETTERS[answer]} is the target turned ${rot}° clockwise.`,
-        'The other three are mirror images, turned to different angles to confuse you.',
+        findMirror ? `Options ${opts.map((o, k) => (o.ok ? null : LETTERS[k])).filter(Boolean).join(', ')} are the target turned to different angles.` : `Option ${LETTERS[answer]} is the target turned ${opts[answer].rot}° clockwise.`,
+        findMirror ? `Option <strong>${LETTERS[answer]}</strong> is flipped. However you turn it, it never matches.` : 'The other options are mirror images, turned to different angles to confuse you.',
       ],
       trick: 'Pick one stand-out part (the little “nub”) and track where it goes as you mentally turn the shape.',
     };
@@ -81,80 +93,140 @@
   const frame = (inner) => `<svg viewBox="0 0 60 60" class="fig sm" aria-hidden="true"><rect x="2" y="2" width="56" height="56" rx="5" class="frame"/>${inner}</svg>`;
   const qmark = `<svg viewBox="0 0 60 60" class="fig sm" aria-hidden="true"><rect x="2" y="2" width="56" height="56" rx="5" class="frame dashed"/><text x="30" y="40" text-anchor="middle" class="qm">?</text></svg>`;
   const seqFigure = (frames) => `<div class="seqrow">${frames.join('<span class="arrow">→</span>')}<span class="arrow">→</span>${qmark}</div>`;
+  // Shuffle 4 candidate answers (first is correct) that must all look different (by key).
+  const visOpts = (correct, wrongs, key) => {
+    const out = [correct]; for (const w of wrongs) if (out.length < 4 && !out.some((o) => key(o) === key(w))) out.push(w);
+    const s = shuffle(out.map((o, i) => ({ o, ok: i === 0 })));
+    return { list: s.map((x) => x.o), answer: s.findIndex((x) => x.ok) };
+  };
+  const visQ = (q, frames, render, v, describe, steps, trick) => ({ visual: true, q, figure: seqFigure(frames.map(render)), options: v.list.map(render), answer: v.answer, describe: describe + ' Options: ' + v.list.map((o, k) => `${LETTERS[k]}) ${o.d}`).join('; ') + '.', steps, trick });
 
   const QN = { TL: 'top-left', TR: 'top-right', BR: 'bottom-right', BL: 'bottom-left' };
   const posName = ([x, y]) => (x === 1 && y === 1 ? 'centre' : `${['top', 'middle', 'bottom'][y]}-${['left', 'middle', 'right'][x]}`);
-  function patternQuestions() {
-    // P1: dot moving clockwise around the edge of a 3x3 grid
-    const P = [[0, 0], [1, 0], [2, 0], [2, 1], [2, 2], [1, 2], [0, 2], [0, 1]];
-    const grid = '<path d="M21 4V56M39 4V56M4 21H56M4 39H56" class="gridline"/>';
-    const dotAt = ([x, y]) => frame(`${grid}<circle cx="${12 + x * 18}" cy="${12 + y * 18}" r="6" class="ink"/>`);
-    const p1opts = shuffle([{ ok: true, p: P[4] }, { ok: false, p: P[5] }, { ok: false, p: P[6] }, { ok: false, p: [1, 1] }]);
+  const BORDER = [[0, 0], [1, 0], [2, 0], [2, 1], [2, 2], [1, 2], [0, 2], [0, 1]];
+  const ord = ['1st', '2nd', '3rd', '4th'];
 
-    // P2: arrow turning 45° clockwise each step
-    const arrow = (a) => frame(`<g transform="rotate(${a} 30 30)"><path d="M30 12 L40 26 H34 V48 H26 V26 H20 Z" class="ink"/></g>`);
-    const p2opts = shuffle([{ ok: true, a: 180 }, { ok: false, a: 225 }, { ok: false, a: 90 }, { ok: false, a: 135 }]);
-
-    // P3: regular polygons gaining one side each step
-    const poly = (n) => {
-      const pts = Array.from({ length: n }, (_, k) => {
-        const t = -Math.PI / 2 + (2 * Math.PI * k) / n;
-        return `${(30 + 21 * Math.cos(t)).toFixed(1)},${(31 + 21 * Math.sin(t)).toFixed(1)}`;
-      }).join(' ');
-      return frame(`<polygon points="${pts}" class="ink-outline"/>`);
-    };
-    const p3opts = shuffle([{ ok: true, n: 7 }, { ok: false, n: 8 }, { ok: false, n: 6 }, { ok: false, n: 5 }]);
-
-    // P4: shaded quarter moves clockwise AND dots increase by one
-    const Q = { TL: [4, 4], TR: [30, 4], BR: [30, 30], BL: [4, 30] };
-    const quad = (q, n) => {
-      const [x, y] = Q[q];
-      const dots = Array.from({ length: n }, (_, k) => `<circle cx="${30 + (k - (n - 1) / 2) * 8}" cy="30" r="3" class="dot"/>`).join('');
-      return frame(`<rect x="${x}" y="${y}" width="26" height="26" class="shade"/><path d="M30 4V56M4 30H56" class="gridline"/>${dots}`);
-    };
-    const p4opts = shuffle([{ ok: true, q: 'TL', n: 5 }, { ok: false, q: 'TR', n: 5 }, { ok: false, q: 'TL', n: 4 }, { ok: false, q: 'BL', n: 5 }]);
-
-    return [
-      {
-        visual: true, q: 'Which picture comes next in the pattern?',
-        figure: seqFigure([0, 1, 2, 3].map((i) => dotAt(P[i]))),
-        options: p1opts.map((o) => dotAt(o.p)), answer: p1opts.findIndex((o) => o.ok),
-        describe: 'Picture sequence on a 3x3 grid. Frame 1: dot top-left. Frame 2: top-middle. Frame 3: top-right. Frame 4: middle-right. What comes next? Options: ' + p1opts.map((o, k) => `${LETTERS[k]}) dot at ${posName(o.p)}`).join('; ') + '.',
-        steps: ['The dot moves one square at a time around the outside edge: top-left → top-middle → top-right → middle-right.', 'It is going clockwise, so the next square is <strong>bottom-right</strong>.'],
-        trick: 'Describe each step in words (“moves one right”) and repeat that rule once more.',
-      },
-      {
-        visual: true, q: 'Which picture comes next in the pattern?',
-        figure: seqFigure([0, 45, 90, 135].map(arrow)),
-        options: p2opts.map((o) => arrow(o.a)), answer: p2opts.findIndex((o) => o.ok),
-        describe: 'Picture sequence of an arrow. Frame 1 points up (0°), frame 2 up-right (45°), frame 3 right (90°), frame 4 down-right (135°). What comes next? Options: ' + p2opts.map((o, k) => `${LETTERS[k]}) arrow turned ${o.a}° from up`).join('; ') + '.',
-        steps: ['The arrow turns an eighth of a circle (45°) clockwise each time: up → up-right → right → down-right.', 'Next is <strong>straight down</strong> (180°).'],
-        trick: 'For rotations, work out the turn per step (here 45°) and add it once more.',
-      },
-      {
-        visual: true, q: 'Which picture comes next in the pattern?',
-        figure: seqFigure([3, 4, 5, 6].map(poly)),
-        options: p3opts.map((o) => poly(o.n)), answer: p3opts.findIndex((o) => o.ok),
-        describe: 'Picture sequence of shapes: triangle, square, pentagon, hexagon. What comes next? Options: ' + p3opts.map((o, k) => `${LETTERS[k]}) a ${o.n}-sided shape`).join('; ') + '. (The learner sees pictures and must count sides.)',
-        steps: ['Count the sides: triangle (3), square (4), pentagon (5), hexagon (6).', 'One side is added each time, so next is a <strong>7-sided shape</strong> (heptagon).'],
-        trick: 'When shapes change, count something: sides, dots, lines or corners.',
-      },
-      {
-        visual: true, q: 'Two things change at once. Which picture comes next?',
-        figure: seqFigure([['TL', 1], ['TR', 2], ['BR', 3], ['BL', 4]].map(([q, n]) => quad(q, n))),
-        options: p4opts.map((o) => quad(o.q, o.n)), answer: p4opts.findIndex((o) => o.ok),
-        describe: 'Picture sequence: a square split into 4 quarters, one quarter shaded, plus dots in the middle. Frame 1: top-left shaded, 1 dot. Frame 2: top-right, 2 dots. Frame 3: bottom-right, 3 dots. Frame 4: bottom-left, 4 dots. What comes next? Options: ' + p4opts.map((o, k) => `${LETTERS[k]}) ${QN[o.q]} shaded with ${o.n} dots`).join('; ') + '.',
-        steps: ['Rule 1: the shaded quarter moves clockwise: top-left → top-right → bottom-right → bottom-left → back to <strong>top-left</strong>.', 'Rule 2: the number of dots goes up by one: 1, 2, 3, 4 → <strong>5</strong>.', 'Only one option has both: top-left shaded with 5 dots.'],
-        trick: 'Track each changing feature separately, then find the option that satisfies all the rules.',
-      },
-    ];
-  }
+  const PATTERNS = [
+    function dotWalk() {
+      const s = R8(), k = pick([1, 1, 2]), d = pick([1, -1]); const at = (i) => BORDER[(((s + d * k * i) % 8) + 8) % 8];
+      const grid = '<path d="M21 4V56M39 4V56M4 21H56M4 39H56" class="gridline"/>';
+      const render = (o) => frame(`${grid}<circle cx="${12 + o.p[0] * 18}" cy="${12 + o.p[1] * 18}" r="6" class="ink"/>`);
+      const mk = (p) => ({ p, d: `dot at ${posName(p)}` });
+      const v = visOpts(mk(at(4)), [mk(at(5)), mk(at(3)), mk([1, 1]), mk(at(-4 + 8)), mk(at(6)), mk(at(2))], (o) => o.p.join());
+      const dir = d === 1 ? 'clockwise' : 'anticlockwise';
+      return visQ('Which picture comes next in the pattern?', [0, 1, 2, 3].map((i) => mk(at(i))), render, v,
+        `Picture sequence on a 3x3 grid; a dot moves around the edge. Frames: ${[0, 1, 2, 3].map((i) => `${ord[i]} ${posName(at(i))}`).join(', ')}. What comes next?`,
+        [`The dot moves around the outside edge, ${k} square${k > 1 ? 's' : ''} at a time, ${dir}: ${[0, 1, 2, 3].map((i) => posName(at(i))).join(' → ')}.`, `One more move ${dir} lands on <strong>${posName(at(4))}</strong>.`],
+        'Describe each step in words (“moves two squares clockwise”) and repeat that rule once more.');
+    },
+    function arrowTurn() {
+      const a0 = pick([0, 45, 90, 135, 180, 225, 270, 315]), st = pick([45, 90, 135]) * pick([1, -1]); const ang = (i) => (((a0 + st * i) % 360) + 360) % 360;
+      const render = (o) => frame(`<g transform="rotate(${o.a} 30 30)"><path d="M30 12 L40 26 H34 V48 H26 V26 H20 Z" class="ink"/></g>`);
+      const NAMES = { 0: 'up', 45: 'up-right', 90: 'right', 135: 'down-right', 180: 'down', 225: 'down-left', 270: 'left', 315: 'up-left' };
+      const mk = (a) => ({ a, d: `arrow pointing ${NAMES[a]}` });
+      const v = visOpts(mk(ang(4)), [mk((ang(4) + 45) % 360), mk((ang(4) + 315) % 360), mk((ang(4) + 180) % 360), mk(ang(3)), mk(ang(5))], (o) => o.a);
+      const dir = st > 0 ? 'clockwise' : 'anticlockwise';
+      return visQ('Which picture comes next in the pattern?', [0, 1, 2, 3].map((i) => mk(ang(i))), render, v,
+        `Picture sequence of an arrow. Frames point: ${[0, 1, 2, 3].map((i) => NAMES[ang(i)]).join(', ')}. What comes next?`,
+        [`The arrow turns ${Math.abs(st)}° ${dir} each time: ${[0, 1, 2, 3].map((i) => NAMES[ang(i)]).join(' → ')}.`, `One more turn: it points <strong>${NAMES[ang(4)]}</strong>.`],
+        `For rotations, work out the turn per step (here ${Math.abs(st)}°, ${Math.abs(st) === 45 ? 'an eighth' : Math.abs(st) === 90 ? 'a quarter' : 'three eighths'} of a circle) and add it once more.`);
+    },
+    function polygons() {
+      const up = Math.random() < 0.6; const n0 = up ? pick([3, 4]) : pick([8, 9]); const n = (i) => n0 + (up ? i : -i);
+      const render = (o) => {
+        const pts = Array.from({ length: o.n }, (_, k) => { const t = -Math.PI / 2 + (2 * Math.PI * k) / o.n; return `${(30 + 21 * Math.cos(t)).toFixed(1)},${(31 + 21 * Math.sin(t)).toFixed(1)}`; }).join(' ');
+        return frame(`<polygon points="${pts}" class="ink-outline"/>`);
+      };
+      const mk = (x) => ({ n: x, d: `a ${x}-sided shape` });
+      const ans = n(4); const v = visOpts(mk(ans), [mk(ans + 1), mk(ans - 1), mk(ans + 2), mk(ans - 2)].filter((o) => o.n >= 3), (o) => o.n);
+      return visQ('Which picture comes next in the pattern?', [0, 1, 2, 3].map((i) => mk(n(i))), render, v,
+        `Picture sequence of regular shapes with ${[0, 1, 2, 3].map(n).join(', ')} sides. What comes next? (The learner must count sides.)`,
+        [`Count the sides: ${[0, 1, 2, 3].map(n).join(', ')}.`, `One side is ${up ? 'added' : 'removed'} each time, so next is a <strong>${ans}-sided shape</strong>.`],
+        'When shapes change, count something: sides, dots, lines or corners.');
+    },
+    function quarterDots() {
+      const order = Math.random() < 0.5 ? ['TL', 'TR', 'BR', 'BL'] : ['TL', 'BL', 'BR', 'TR']; const s = R4(); const q = (i) => order[(s + i) % 4];
+      const down = Math.random() < 0.35; const d0 = down ? pick([5, 6]) : pick([1, 2]); const n = (i) => d0 + (down ? -i : i);
+      const Q = { TL: [4, 4], TR: [30, 4], BR: [30, 30], BL: [4, 30] };
+      const render = (o) => {
+        const [x, y] = Q[o.q];
+        const dots = Array.from({ length: o.n }, (_, k) => `<circle cx="${30 + (k - (o.n - 1) / 2) * 7.5}" cy="30" r="3" class="dot"/>`).join('');
+        return frame(`<rect x="${x}" y="${y}" width="26" height="26" class="shade"/><path d="M30 4V56M4 30H56" class="gridline"/>${dots}`);
+      };
+      const mk = (qq, nn) => ({ q: qq, n: nn, d: `${QN[qq]} shaded with ${nn} dot${nn === 1 ? '' : 's'}` });
+      const v = visOpts(mk(q(4), n(4)), [mk(q(5), n(4)), mk(q(4), n(3)), mk(q(3), n(4)), mk(q(5), n(5)), mk(q(4), n(5))].filter((o) => o.n >= 1), (o) => o.q + o.n);
+      const dir = order[1] === 'TR' ? 'clockwise' : 'anticlockwise';
+      return visQ('Two things change at once. Which picture comes next?', [0, 1, 2, 3].map((i) => mk(q(i), n(i))), render, v,
+        `Picture sequence: a square split into 4 quarters, one shaded, with dots in the middle. Frames: ${[0, 1, 2, 3].map((i) => `${QN[q(i)]} shaded + ${n(i)} dots`).join('; ')}. What comes next?`,
+        [`Rule 1: the shaded quarter moves ${dir}: ${[0, 1, 2, 3].map((i) => QN[q(i)]).join(' → ')} → next <strong>${QN[q(4)]}</strong>.`, `Rule 2: the dots go ${down ? 'down' : 'up'} by one: ${[0, 1, 2, 3].map(n).join(', ')} → <strong>${n(4)}</strong>.`, 'Only one option follows both rules.'],
+        'Track each changing feature separately, then find the option that satisfies all the rules.');
+    },
+    function gridFill() {
+      const st = pick([1, 2]); const c0 = st === 2 ? 1 : pick([1, 2]); const c = (i) => c0 + st * i; const ans = c(4);
+      if (ans > 9) return gridFill();
+      const render = (o) => frame(Array.from({ length: 9 }, (_, k) => `<rect x="${7 + (k % 3) * 16}" y="${7 + Math.floor(k / 3) * 16}" width="14" height="14" rx="2" class="${k < o.c ? 'shade' : 'cell'}"/>`).join(''));
+      const mk = (x) => ({ c: x, d: `${x} squares filled` });
+      const v = visOpts(mk(ans), [mk(ans - 1), mk(ans + 1), mk(c(3)), mk(ans - 2), mk(ans - 3), mk(ans + 2)].filter((o) => o.c >= 1 && o.c <= 9), (o) => o.c);
+      return visQ('Which picture comes next in the pattern?', [0, 1, 2, 3].map((i) => mk(c(i))), render, v,
+        `Picture sequence of 3x3 grids filled in reading order. Filled squares per frame: ${[0, 1, 2, 3].map(c).join(', ')}. What comes next?`,
+        [`Count the filled squares: ${[0, 1, 2, 3].map(c).join(', ')}.`, `They go up by ${st} each time, so next has <strong>${ans}</strong> filled squares.`],
+        'Count first. Most picture patterns hide a simple number pattern.');
+    },
+  ];
+  const R8 = () => Math.floor(Math.random() * 8), R4 = () => Math.floor(Math.random() * 4);
 
   function visualQuestions() {
-    const rot = SHAPES.map(rotationQuestion);
-    const pat = patternQuestions();
+    const colors = shuffle(COLORS);
+    const rot = shuffle(SHAPES).slice(0, 4).map((s, i) => rotationQuestion(s, colors[i]));
+    const pat = shuffle(PATTERNS).slice(0, 4).map((f) => f());
     return [rot[0], pat[0], rot[1], pat[1], rot[2], pat[2], rot[3], pat[3]];
   }
+
+  // ---------- building a fresh test: least-seen first, options shuffled ----------
+  const SEEN_KEY = 'aptitude.seen.v1';
+  const seenLoad = () => { try { return JSON.parse(localStorage.getItem(SEEN_KEY)) || {}; } catch { return {}; } };
+  const seenSave = (s) => { try { localStorage.setItem(SEEN_KEY, JSON.stringify(s)); } catch { /* private mode */ } };
+  const leastSeen = (items, n, seen, key = (x) => x.id) => shuffle(items).sort((a, b) => (seen[key(a)] || 0) - (seen[key(b)] || 0)).slice(0, n);
+  const shuffleOptions = (q) => {
+    const idx = shuffle(q.options.map((_, i) => i));
+    return { ...q, options: idx.map((i) => q.options[i]), answer: idx.indexOf(q.answer) };
+  };
+  function buildQuestions(bank) {
+    const G = window.GEN, seen = seenLoad(); let qs = [];
+    const used = [];
+    if (bank === 'visual') return visualQuestions();
+    if (bank === 'maths') {
+      const lv = (l) => G.maths.filter((f) => f.level === l);
+      for (const [l, n] of [[1, 4], [2, 7], [3, 4]]) {
+        const fams = leastSeen(lv(l), n, seen); used.push(...fams.map((f) => f.id));
+        qs.push(...fams.map((f) => ({ id: f.id, ...f.gen() })));
+      }
+    } else if (bank === 'logic') {
+      const gens = leastSeen(G.logic, 6, seen); used.push(...gens.map((f) => f.id));
+      qs.push(...gens.map((f) => ({ id: f.id, ...f.gen() })));
+      const pool = (k) => B.staticLogic.filter((q) => q.kind === k);
+      const statics = [...leastSeen(pool('syll'), 2, seen), ...leastSeen(pool('cond'), 1, seen), ...leastSeen(pool('fam'), 1, seen)];
+      used.push(...statics.map((q) => q.id)); qs.push(...statics);
+      qs = shuffle(qs);
+    } else if (bank === 'vocab') {
+      for (const [k, n] of Object.entries(B.vocabMix)) {
+        const items = leastSeen(B.vocab.filter((q) => q.kind === k), n, seen); used.push(...items.map((q) => q.id)); qs.push(...items);
+      }
+      qs = shuffle(qs);
+    }
+    used.forEach((id) => { seen[id] = (seen[id] || 0) + 1; });
+    seenSave(seen);
+    return qs.map(shuffleOptions);
+  }
+  function fluencyRounds() {
+    const F = B.fluency; const [c1, c2] = shuffle(F.categories); const L = pick(F.letters);
+    return [
+      { prompt: `Name as many <strong>${c1[0]}</strong> as you can.`, hint: `e.g. ${c1[1]}` },
+      { prompt: `Type as many words as you can that start with the letter <strong>${L}</strong>.`, letter: L.toLowerCase(), hint: 'Any real word counts. No names of people or places.' },
+      { prompt: `Name as many <strong>${c2[0]}</strong> as you can.`, hint: `e.g. ${c2[1]}` },
+    ];
+  }
+  const resetSeen = () => { try { localStorage.removeItem(SEEN_KEY); } catch { /* ignore */ } };
 
   // ---------- section definitions ----------
   const B = window.BANK;
@@ -164,7 +236,7 @@
     { id: 'digits', title: 'Number sequence memory', est: 6, type: 'span', kind: 'digits',
       intro: 'Numbers will flash one at a time. Then type them back, <strong>first in the same order</strong>, later <strong>in reverse order</strong>. Sequences get longer until you miss two in a row at the same length.' },
     { id: 'maths', title: 'Mathematics', est: 15, minutes: 15, type: 'mcq', bank: 'maths',
-      intro: '15 questions, from simple calculations to problem-solving. About 1 minute each. You may use scrap paper. You can move back and forth between questions.' },
+      intro: '15 questions, from simple calculations to problem-solving. About 1 minute each. Use the scratch paper under each question. You can move back and forth between questions.' },
     { id: 'logic', title: 'Logical reasoning', est: 10, minutes: 10, type: 'mcq', bank: 'logic',
       intro: '10 puzzles: truth/lie, ordering, “must be true” statements, codes and directions. Read each word carefully, especially <em>all</em>, <em>some</em> and <em>must</em>.' },
     { id: 'visual', title: 'Visual reasoning', est: 8, minutes: 8, type: 'mcq', bank: 'visual',
@@ -210,6 +282,7 @@
         </label>
         <div class="row gap">
           ${key ? '<button type="button" class="btn" id="forget">Remove key</button>' : ''}
+          <button type="button" class="btn" id="reset-seen">Reset question history</button>
           <button type="button" class="btn primary" id="done">Done</button>
         </div>
       </div>`;
@@ -217,6 +290,7 @@
     $('#model', dlg).value = window.Coach.getModel();
     $('#model', dlg).onchange = (e) => window.Coach.setModel(e.target.value);
     window.Coach.bindKeyForm($('[data-keyform]', dlg), () => { openSettings(); renderCoachSetup(); });
+    $('#reset-seen', dlg).onclick = (e) => { resetSeen(); e.target.textContent = 'History cleared ✓'; };
     const f = $('#forget', dlg);
     if (f) f.onclick = () => { window.Coach.clearKey(); openSettings(); renderCoachSetup(); };
     if (!dlg.open) dlg.showModal();
@@ -231,6 +305,7 @@
       <section class="card hero">
         <h1>Aptitude Test</h1>
         <p class="lead">A full practice assessment of about <strong>${total} minutes</strong> covering memory, maths, logic, visual reasoning, speed and vocabulary. Every question comes with a step-by-step explanation in plain language.</p>
+        <p class="small muted">Every attempt is a fresh mix: new numbers, shapes and puzzles, and the questions you’ve seen least come first.</p>
         <ol class="toc">
           ${ALL_SECTIONS.map((s) => `<li><label><input type="checkbox" name="sec" value="${s.id}" checked> <span>${s.title}</span><small>${s.est} min</small></label></li>`).join('')}
         </ol>
@@ -293,7 +368,7 @@
 
   let scratchOpen = false;
   function runMCQ(sec, t, done) {
-    const qs = sec.bank === 'visual' ? visualQuestions() : B[sec.bank];
+    const qs = buildQuestions(sec.bank);
     const answers = new Array(qs.length).fill(null);
     const practice = state.mode === 'practice';
     let i = 0;
@@ -505,10 +580,11 @@
   // ---------- verbal fluency ----------
   function runFluency(sec, t, done) {
     const out = { type: 'fluency', rounds: [] };
+    const rounds = fluencyRounds();
     skipFn = () => { stopCountdown(); done(out); };
     setTimer('');
     const round = (r) => new Promise((res) => {
-      if (!paint(t, `<section class="card"><p class="kicker">Round ${out.rounds.length + 1} of ${B.fluency.length}</p><h2>${r.prompt}</h2><p class="muted">${r.hint}</p><button class="btn primary" id="ok">Start 60 seconds</button></section>`)) return;
+      if (!paint(t, `<section class="card"><p class="kicker">Round ${out.rounds.length + 1} of ${rounds.length}</p><h2>${r.prompt}</h2><p class="muted">${r.hint}</p><button class="btn primary" id="ok">Start 60 seconds</button></section>`)) return;
       $('#ok').onclick = () => {
         const words = [];
         const rejected = [];
@@ -540,7 +616,7 @@
       };
     });
     (async () => {
-      for (const r of B.fluency) { await round(r); if (!alive(t)) return; }
+      for (const r of rounds) { await round(r); if (!alive(t)) return; }
       done(out);
     })();
   }
