@@ -61,13 +61,15 @@ A second app in this repo, with the same look and the same DeepSeek coach: learn
 
 **Run it:** open `vmware/index.html`, or on GitHub Pages go to `/vmware/`. It shares your saved DeepSeek key with the aptitude test.
 
-- **7 lessons:** hardware, vSphere and clusters, storage, networking, VMs and housekeeping, performance, and "my environment".
-- **86 quiz questions** (options shuffled every time), with an explanation after each one. Quiz by module, mixed, **weak spots** (what you got wrong), or a 20-question **interview round** with no hints.
-- **20 scenario challenges:** write your answer, get an AI review, then tick the points of a rubric and compare with the model answer.
+- **8 lessons:** hardware (incl. BIOS/firmware tuning), vSphere and clusters (incl. supported versions), storage (incl. APD/PDL, queue depth, VAAI), networking, VMs and housekeeping, performance, resource controls, and "my environment".
+- **107 quiz questions** (options shuffled every time; wrong options are written to be as long as the right one, so length gives nothing away), with an explanation after each one. Quiz by module, mixed, **weak spots**, or a 20-question **interview round** with a 20-minute timer and no hints.
+- **Build Lab:** a PC-build-style game. Pick a supported vSphere version (9.1, 9.0 or 8.0 U3; 7.0 is shown as end of support), a mission and a budget, then buy hosts, choose storage, cable the ports to switches, plan VLANs and MTU, install ESX/ESXi, deploy vCenter and configure the cluster. Live checks explain every mistake, and at the end you stress-test your build (fail a host, a switch, a fabric, vCenter).
+- **Cheat sheet:** one printable page to read before the interview.
+- **24 scenario challenges:** write your answer, get an AI review, then tick the points of a rubric and compare with the model answer.
 - **13 interactive diagrams** inside the lessons and in the **Visual lab**: tap parts of a server, drag NUMA/CPU/datastore/snapshot sliders, fail a host, a storage path or a network uplink and watch what survives, step through a vMotion and tick what would block it, walk through retiring a VMFS 5 datastore, and follow a "the VM is slow" decision tree.
 - **Pictures in quiz questions:** 13 questions show a diagram, and some show a labelled version after you check your answer.
 - **AI coach** on every lesson, question and challenge. It guides before you answer and explains fully after. A free **tutor** page can run a mock interview.
 - **My environment:** the headline numbers to learn by heart. Hostnames, IPs and company names are left out on purpose (this repo is public).
 - Progress is saved only in your browser (⚙ Settings to reset).
 
-Files: `vmware/diagrams.js` and `diagrams-more.js` (interactive diagrams and quiz pictures), `vmware/data-lessons.js` (lessons and environment facts), `data-questions.js` (question bank, correct answer listed first), `data-challenges.js` (scenarios), `coach.js`, `app.js`, `vmware.css`.
+Files: `vmware/buildlab.js` (Build Lab game), `vmware/diagrams.js` and `diagrams-more.js` (interactive diagrams and quiz pictures), `vmware/data-lessons.js` (lessons and environment facts), `data-questions.js` (question bank, correct answer listed first), `data-challenges.js` (scenarios), `coach.js`, `app.js`, `vmware.css`.

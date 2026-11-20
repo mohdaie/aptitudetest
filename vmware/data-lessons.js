@@ -43,6 +43,7 @@ VMW.MODULES = [
   { id: 'm4', icon: '🌐', title: 'Networking', blurb: 'vSwitch, dvSwitch, port groups, VMkernel, VLANs, uplinks' },
   { id: 'm5', icon: '📦', title: 'VMs and housekeeping', blurb: 'vmdk, snapshots, Tools, templates, zombie files' },
   { id: 'm6', icon: '🔍', title: 'Performance and troubleshooting', blurb: 'CPU Ready, ballooning, latency, esxtop, a method' },
+  { id: 'm8', icon: '🎚', title: 'Resource controls', blurb: 'Shares, reservations, limits, resource pools' },
   { id: 'm7', icon: '🏢', title: 'My environment', blurb: 'Numbers and facts from your own estate' },
 ];
 
@@ -62,6 +63,11 @@ VMW.LESSONS = {
 <p class="tip"><strong>Rule of thumb:</strong> size VMs as small as the workload allows. Bigger is not faster.</p>` },
       { t: 'Out-of-band management', h: `<p><strong>HPE iLO</strong> and <strong>Dell iDRAC</strong> are a small separate computer inside the server with its own network port. Even when ESXi is dead or the server is off, you can still: see hardware health (fans, disks, PSUs, memory errors), power on/off, open a remote console and mount an ISO.</p>` },
       { t: 'CPU generations and EVC', h: `<p>Newer CPUs (for example Gen11 Sapphire Rapids) have newer instruction sets than older ones (Skylake in R640/R740). A running VM cannot move live between very different CPU types unless the cluster uses <strong>EVC (Enhanced vMotion Compatibility)</strong>, which hides the newer features so all hosts look the same.</p>` },
+      { t: 'Tuning a host for steady performance', h: `<ul><li><strong>BIOS power profile:</strong> deep power saving can add latency. Use <strong>High Performance</strong>, or <strong>OS Controlled</strong> so ESXi manages power (its own policy can then be set to High Performance or Balanced).</li>
+<li><strong>Firmware and drivers:</strong> BIOS, NIC and HBA firmware must match drivers the <strong>Broadcom Compatibility Guide</strong> (the old VMware HCL) lists for your ESXi version. Mismatches cause link flaps, storage resets and purple screens.</li>
+<li><strong>vLCM images</strong> can bundle the ESXi version, vendor add-on, drivers and firmware so every host in a cluster is identical.</li>
+<li><strong>Boot device:</strong> since 7.0, ESXi keeps logs and data on its boot device, so SD cards and USB sticks alone are no longer supported for new installs. Use a durable local disk or a mirrored M.2 pair (Dell BOSS, HPE NS204i).</li>
+<li><strong>Memory:</strong> populate all memory channels evenly per socket, or memory bandwidth drops.</li></ul>` },
       { t: 'Resilience features', h: `<ul><li><strong>Redundant power supplies</strong> on two circuits.</li><li><strong>ECC RAM</strong> corrects single-bit errors.</li><li><strong>RAID controller</strong> for the local boot disks (the "Local" adapters you see in RVTools).</li><li><strong>Hot-swap</strong> disks and fans.</li></ul>` },
     ],
     yours: `Your 50 hosts are mostly HPE DL380 (Gen10, Gen10 Plus, Gen11) and Dell R640/R740, all 2-socket, with 36 to 64 cores and 1 to 2 TB RAM. Three small Cisco hosts have no VMs. Check one host's Summary tab in vCenter and find: model, CPU, number of cores, RAM, ESXi version.`,
@@ -76,6 +82,13 @@ VMW.LESSONS = {
       { t: 'DRS', h: `<p>Watches host load and uses vMotion to balance VMs across hosts. It also picks the best host when a VM powers on. Levels: manual, partially automated, fully automated. It can also use <strong>affinity rules</strong> (keep VMs together or apart).</p>` },
       { t: 'HA', w: 'cluster', h: `<p>If a host fails, HA restarts its VMs on the other hosts. This is a <strong>restart</strong> (short outage), not zero downtime. HA decides a host has failed using network heartbeats and <strong>heartbeat datastores</strong>. The <strong>isolation address</strong> is an IP the host pings to check if it has lost the network or the whole network is down.</p>` },
       { t: 'Admission control', h: `<p>Reserves spare capacity so that HA can really restart VMs after a failure. "Failover level 1" means the cluster keeps room for one host to fail. If admission control is off, HA still restarts what it can, but there may not be enough capacity for everything.</p><p class="tip">A 2-host cluster at failover level 1 means each host must be able to carry the whole cluster, so only about 50% of capacity is usable.</p>` },
+      { t: 'Versions and support (as of Nov 2026)', h: `<table class="summary"><tr><th>Version</th><td>Status</td></tr>
+<tr><th>vSphere 9.1</th><td>Latest (May 2026). vCenter 9.1.1 is the newest build line. General support to Aug 2028.</td></tr>
+<tr><th>vSphere 9.0</th><td>Released Jun 2025. General support to Sep 2027.</td></tr>
+<tr><th>vSphere 8.0 U3</th><td>Released Oct 2022 (U3 in 2024). General support to 11 Oct 2027. Your environment runs 8.0 U3.</td></tr>
+<tr><th>vSphere 7.0</th><td><strong>End of general support 2 Oct 2025.</strong> No more patches.</td></tr></table>
+<p><strong>What changed in 9:</strong> the hypervisor is called <strong>ESX</strong> again (not ESXi). Host patching must use <strong>vLCM images</strong> (baselines are gone). vCenter 9 manages ESX 8.0 and newer only. Licensing is applied to vCenter, and hosts are licensed through it. vSphere 9 is sold in the VCF and VVF bundles and can be deployed with the <strong>VCF Installer</strong>.</p>
+<p class="tip"><strong>Upgrade order:</strong> vCenter first, then hosts, then VMware Tools and VM hardware. vCenter must be the same version as, or newer than, every host it manages.</p>` },
     ],
     yours: `vCenter 8.0.3 manages 50 hosts in 9 clusters. HA and DRS are on in all of them. Admission control is off in the Internal cluster. The GPU cluster shows HA warnings about the isolation address and heartbeat datastores. Open Cluster > Configure > vSphere Availability to see each setting.`,
     terms: [['Cluster', 'A group of hosts managed as one pool'], ['vMotion', 'Live move of a VM between hosts'], ['DRS', 'Automatic load balancing'], ['HA', 'Restarts VMs after a host failure'], ['Admission control', 'Keeps spare capacity for HA'], ['Isolation address', 'IP a host pings to detect isolation'], ['EVC', 'CPU compatibility mode']],
@@ -88,6 +101,11 @@ VMW.LESSONS = {
       { t: 'VMFS', w: 'vmfsmig', h: `<p>The VMware file system designed so many hosts can use the same LUN at the same time. Versions: <strong>VMFS 5</strong> (older) and <strong>VMFS 6</strong> (newer, automatic space reclamation). There is <strong>no in-place upgrade</strong> from 5 to 6: create a new datastore and Storage vMotion the VMs over.</p>` },
       { t: 'Multipathing', h: `<p>Each LUN is reachable over several <strong>paths</strong> (HBA port → switch → array port). If one path fails, I/O continues on another. The <strong>path selection policy</strong> decides how paths are used: <strong>Round Robin</strong> alternates between active paths (common with active/active arrays like Hitachi), <strong>Fixed</strong> uses one preferred path, <strong>MRU</strong> uses the last working path.</p>` },
       { t: 'Provisioning and space', w: 'datastore', h: `<ul><li><strong>Thin:</strong> uses space only as data is written. Saves space, but datastores can be over-committed and fill up.</li><li><strong>Thick lazy zeroed / eager zeroed:</strong> reserves the full size up front.</li><li><strong>Space reclamation (UNMAP):</strong> returns deleted space to the array. Automatic on VMFS 6.</li></ul><p><strong>Storage vMotion</strong> moves a running VM's disks to another datastore.</p>` },
+      { t: 'Deeper: APD, PDL, queues and VAAI', h: `<ul><li><strong>APD (All Paths Down):</strong> every path to a LUN is lost, but the array has not said the LUN is gone. ESXi keeps retrying, then fails I/O after a timeout. Often a fabric or cabling problem.</li>
+<li><strong>PDL (Permanent Device Loss):</strong> the array says the LUN is gone (for example, it was unpresented). HA can restart affected VMs elsewhere if <strong>VM Component Protection</strong> is on.</li>
+<li><strong>Queue depth:</strong> how many I/Os can be outstanding to a device at once (per HBA and per LUN). A full queue makes I/O wait inside ESXi, which shows as high <strong>KAVG</strong>.</li>
+<li><strong>VAAI:</strong> lets the array do heavy work (cloning, zeroing, locking with ATS) instead of the host, which makes clones and thick disks much faster.</li>
+<li><strong>Zoning and masking:</strong> FC switches decide which HBA can talk to which array port (zoning); the array decides which hosts see which LUN (masking). A new LUN needs both.</li></ul>` },
       { t: 'Latency, IOPS, throughput', h: `<ul><li><strong>IOPS:</strong> operations per second. Important for databases and many small reads/writes.</li><li><strong>Throughput:</strong> MB/s. Important for backups and large files.</li><li><strong>Latency:</strong> time per operation. Under ~20 ms is generally fine, over ~30 ms is a problem.</li></ul><p>Host-side latency terms: <strong>DAVG</strong> (the device/array), <strong>KAVG</strong> (inside the ESXi kernel, usually queueing), <strong>GAVG</strong> (what the guest sees, about DAVG + KAVG).</p>` },
     ],
     yours: `307 VMFS datastores on a Hitachi FC SAN: 1,433 TiB, 64% free. 269 are VMFS 6 and 38 are still VMFS 5. LUNs have 2 paths with Round Robin. HBAs are 16 and 32 Gb. 106 datastores hold no VMs and the lowest has 18% free. In vCenter, open a datastore > Configure > Device Backing to see its LUN, and a host > Storage Devices > Paths to see the paths.`,
@@ -128,6 +146,24 @@ VMW.LESSONS = {
     ],
     yours: `RVTools reports 12 vCPU-per-core warnings (CPU contention risk), 384 in-memory performance tips and 76 disk I/O tips, and 79 active snapshots. Start your own hunt with these.`,
     terms: [['CPU Ready', 'Time waiting for a physical core'], ['Co-stop', 'Multi-vCPU VM waiting for its vCPUs together'], ['Ballooning', 'Host reclaiming guest memory'], ['Swapping', 'Host memory paged to disk (bad)'], ['DAVG', 'Device latency (array/fabric)'], ['KAVG', 'Kernel latency (queueing)'], ['esxtop', 'Live performance tool on the host']],
+  },
+  m8: {
+    intro: 'Resource controls decide who gets CPU and memory when there is not enough for everyone. Used wrongly, they are a classic cause of "why is this slow?".',
+    sections: [
+      { t: 'Three controls', h: `<ul><li><strong>Reservation:</strong> a guaranteed minimum. The VM cannot power on unless the host can give it. Memory reservations also shrink the VM's swap file.</li>
+<li><strong>Limit:</strong> a hard maximum. It applies <em>even when the host is idle</em>. A 16 GB VM with an 8 GB memory limit will balloon and swap above 8 GB.</li>
+<li><strong>Shares:</strong> a relative priority (Low, Normal, High or a number). Shares only matter when VMs compete for a busy resource.</li></ul>
+<p class="tip">Rule of thumb: avoid limits, use reservations sparingly (for example for latency-sensitive databases), and let shares do the work.</p>` },
+      { t: 'Resource pools', h: `<p>A resource pool carves up a cluster's CPU and RAM, with its own shares, reservation and limit. It is <strong>not a folder</strong>.</p>
+<p><strong>The pie paradox:</strong> a pool's shares are split among the VMs inside it. If "Prod" (High shares) holds 40 VMs and "Test" (Normal shares) holds 4, each Test VM can get more than each Prod VM under contention. Use folders for organising, and pools only when you mean to control resources.</p>` },
+      { t: 'How controls interact with HA', h: `<p>Admission control must keep room to restart VMs, and reserved VMs count in full. Large reservations therefore eat failover capacity fast, and HA may refuse new power-ons.</p>` },
+      { t: 'Where to check', h: `<ul><li>VM &gt; Edit Settings &gt; CPU or Memory: Reservation, Limit, Shares.</li>
+<li>Cluster &gt; Monitor &gt; vSphere DRS &gt; CPU/Memory utilisation.</li>
+<li>Cluster &gt; Configure &gt; resource pools: look at shares and the number of VMs in each pool.</li>
+<li>In esxtop memory view, <code>MCTLSZ</code> (balloon) and <code>SWCUR</code> (swap) show the effect of limits.</li></ul>` },
+    ],
+    yours: `RVTools shows 384 "in-memory performance" tips in your estate. Some may be VMs with limits or reservations. Check a few: Edit Settings > Memory > Limit should normally be "Unlimited".`,
+    terms: [['Reservation', 'Guaranteed minimum'], ['Limit', 'Hard maximum, even when idle'], ['Shares', 'Relative priority under contention'], ['Resource pool', 'A slice of cluster CPU/RAM with its own controls'], ['Pie paradox', 'Pool shares are divided among its VMs']],
   },
   m7: {
     intro: 'Know your own numbers. In an interview, concrete facts about your environment show real experience.',

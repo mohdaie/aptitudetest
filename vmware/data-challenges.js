@@ -103,6 +103,26 @@ window.VMW = window.VMW || {};
       'Write five rules of VMware hygiene you would give a new engineer.',
       ['Snapshots are short-lived and never a backup', 'Right-size VMs, start small', 'Verify before deleting anything', 'Disconnect CD-ROM/ISO when done', 'Keep VMware Tools and ESXi consistent', 'Watch datastore free space and latency'],
       '1) Snapshots are for days, not years, and are not backups. 2) Start VMs small and right-size from data. 3) Verify before deleting any file or VM. 4) Disconnect ISOs when done. 5) Keep Tools, ESXi and NTP consistent. 6) Watch datastore free space and latency.'],
+
+    ['m8', 'Hard', 'A VM with a forgotten limit',
+      'A 16 GB SQL VM is slow. The host has 300 GB free RAM. vCenter shows ballooning and swapping on the VM. What do you check and fix?',
+      ['Ballooning/swapping with free host RAM points to a VM-level cap', 'Check Edit Settings > Memory > Limit (and reservation, shares)', 'A limit applies even when the host is idle', 'Remove or raise the limit (change control, owner OK)', 'Check the resource pool it sits in for limits too', 'Verify after: balloon and swap drop (esxtop MCTLSZ, SWCUR)'],
+      'If the host has plenty of free memory but the VM balloons and swaps, something is capping the VM. I would check its memory limit, and the limits on its resource pool. A limit applies even when the host is idle. With the owner\'s approval I would remove the limit, then confirm in vCenter or esxtop that ballooning and swapping stop.'],
+
+    ['m8', 'Core', 'Resource pools used as folders',
+      'Someone created a "Prod" pool with High shares holding 40 VMs and a "Test" pool with Normal shares holding 4 VMs. During a busy period production is slower than test. Why?',
+      ['Pool shares are divided among the VMs inside the pool', '40 VMs split High shares, 4 VMs split Normal shares', 'Each test VM can get more than each prod VM under contention', 'Pools are not folders', 'Fix: use folders for organising; size pool shares for VM count', 'Or remove the pools if no resource control is needed'],
+      'Shares are given to the pool and then split among its VMs. Prod has High shares but 40 VMs, while Test has Normal shares but only 4 VMs, so each test VM gets a bigger slice when CPU is contended. Pools should not be used as folders. I would use folders for organising and either remove the pools or set their shares to match the number of VMs.'],
+
+    ['m1', 'Hard', 'New hosts slower than old ones',
+      'Two new Gen11 hosts give worse latency than the old Gen10 hosts for the same VMs. Hardware is newer and faster on paper. What do you check?',
+      ['BIOS power profile (High Performance or OS Controlled)', 'ESXi power policy on the host', 'Firmware and drivers match the compatibility guide', 'Memory populated evenly across all channels', 'EVC baseline and NUMA layout of the VMs', 'Compare with esxtop and vCenter charts side by side'],
+      'Newer hardware can be slower if it is tuned badly. I would check the BIOS power profile and the ESXi power policy, whether firmware and drivers match the compatibility guide, and whether memory is populated evenly in every channel. Then I would compare the same VM on both host types with esxtop to see if the difference is CPU, memory or storage.'],
+
+    ['m2', 'Core', 'Plan an upgrade from 8 to 9',
+      'Your manager asks how you would upgrade from vSphere 8.0 U3 to 9. Outline the order and the checks.',
+      ['Check licensing/entitlement for 9 (VCF or VVF)', 'Check hardware, drivers and firmware on the compatibility guide', 'Check that third-party tools (backup, monitoring) support 9', 'Move clusters from baselines to vLCM images first', 'Upgrade vCenter first, then hosts, then Tools and VM hardware', 'Back up vCenter and test on a non-production cluster first'],
+      'First I would confirm we are licensed for 9, that our hardware, drivers and firmware are on the compatibility guide, and that tools like backup and monitoring support it. Clusters must use vLCM images, so I would convert any baseline clusters first. Then I would back up vCenter, upgrade vCenter, then the hosts cluster by cluster (non-production first), then VMware Tools and VM hardware.'],
   ];
 
   VMW.CHALLENGES = RAW.map(([mod, level, title, scenario, rubric, model], i) => ({ id: `c-${String(i).padStart(2, '0')}`, mod, level, title, scenario, rubric, model }));

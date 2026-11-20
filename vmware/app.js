@@ -31,12 +31,14 @@
   };
 
   // ---------- header and screen helper ----------
-  const hdr = { bar: $('#hdr'), title: $('#hdr-section'), home: $('#hdr-home'), settings: $('#hdr-settings') };
+  const hdr = { bar: $('#hdr'), title: $('#hdr-section'), home: $('#hdr-home'), settings: $('#hdr-settings'), timer: $('#hdr-timer') };
   let onLeave = null;
+  let keepTimer = false;
   function show(html, title) {
     app.innerHTML = html;
     hdr.bar.hidden = false;
     hdr.title.textContent = title || 'VMware prep';
+    if (!keepTimer) { hdr.timer.textContent = ''; hdr.timer.className = 'timer'; }
     window.scrollTo(0, 0);
   }
   const go = (fn, ...a) => { if (onLeave) { onLeave(); onLeave = null; } fn(...a); };
@@ -70,7 +72,9 @@ LEARNER'S ENVIRONMENT: ${V.ENV_SUMMARY}`;
         <div class="actions">
           <button class="btn primary" data-act="mixed">Mixed quiz (10)</button>
           <button class="btn" data-act="weak">Weak spots</button>
-          <button class="btn" data-act="exam">Interview round (20, no hints)</button>
+          <button class="btn" data-act="exam">Interview round (20 min, no hints)</button>
+          <button class="btn" data-act="build">🛠 Build Lab: build a vSphere environment</button>
+          <button class="btn" data-act="cheat">Cheat sheet</button>
           <button class="btn" data-act="challenges">Scenario challenges</button>
           <button class="btn" data-act="lab">Visual lab (interactive diagrams)</button>
           <button class="btn" data-act="env">My environment</button>
@@ -91,7 +95,7 @@ LEARNER'S ENVIRONMENT: ${V.ENV_SUMMARY}`;
     bindCoachCard();
     $$('[data-lesson]').forEach((b) => (b.onclick = () => go(lesson, b.dataset.lesson)));
     $$('[data-quiz]').forEach((b) => (b.onclick = () => go(startModuleQuiz, b.dataset.quiz)));
-    $$('[data-act]').forEach((b) => (b.onclick = () => go(({ mixed: startMixed, weak: startWeak, exam: startExam, challenges: challengeList, env: envPage, tutor: tutorPage, lab })[b.dataset.act])));
+    $$('[data-act]').forEach((b) => (b.onclick = () => go(({ mixed: startMixed, weak: startWeak, exam: startExam, challenges: challengeList, env: envPage, tutor: tutorPage, lab, cheat: cheatSheet, build: () => window.BuildLab.start(app, { show, go, home, esc, coach: C, BASE }) })[b.dataset.act])));
   }
 
   // ---------- interactive diagrams ----------
@@ -161,6 +165,21 @@ LEARNER'S ENVIRONMENT: ${V.ENV_SUMMARY}`;
   function runQuiz({ title, qs, exam }) {
     const items = qs.map(build);
     let i = 0;
+    let timerId = null, ended = false;
+    if (exam) {
+      const end = Date.now() + items.length * 60 * 1000; // 1 minute per question
+      keepTimer = true;
+      const tick = () => {
+        const left = Math.max(0, Math.ceil((end - Date.now()) / 1000));
+        hdr.timer.textContent = '⏱ ' + Math.floor(left / 60) + ':' + String(left % 60).padStart(2, '0');
+        hdr.timer.className = 'timer' + (left <= 60 ? ' warn' : '');
+        if (left <= 0 && !ended) { ended = true; stopTimer(); finish(true); }
+      };
+      const stopTimer = () => { if (timerId) clearInterval(timerId); timerId = null; keepTimer = false; };
+      onLeave = stopTimer;
+      tick(); timerId = setInterval(tick, 250);
+    }
+    const stopAll = () => { if (onLeave) { onLeave(); onLeave = null; } };
 
     const questionPrompt = (it) => () => {
       const opts = it.opts.map((o, k) => `${LETTERS[k]}) ${o}`).join('\n');
@@ -221,10 +240,11 @@ LEARNER'S ENVIRONMENT: ${V.ENV_SUMMARY}`;
       const pv = $('#prev'); if (pv) pv.onclick = () => { i--; render(); };
     }
 
-    function finish() {
+    function finish(timeUp) {
       if (exam) {
         const left = items.filter((x) => x.picked === null).length;
-        if (left && !confirm(`${left} question(s) unanswered. Finish anyway?`)) return;
+        if (!timeUp && left && !confirm(`${left} question(s) unanswered. Finish anyway?`)) return;
+        stopAll();
         items.forEach((x) => { if (!x.locked) { x.locked = true; if (x.picked !== null) record(x.id, x.picked === x.answer); else record(x.id, false); } });
       }
       const good = items.filter((x) => x.picked === x.answer).length;
@@ -236,6 +256,7 @@ LEARNER'S ENVIRONMENT: ${V.ENV_SUMMARY}`;
         <section class="card">
           <p class="kicker">${esc(title)} · Results</p>
           <div class="score"><span class="num">${good}/${items.length}</span><span>${pct}%</span></div>
+          ${timeUp ? '<p class="w-alert">⏱ Time is up. Unanswered questions count as wrong.</p>' : ''}
           <p class="lead">${pct >= 85 ? 'Excellent. You are interview-ready on these topics.' : pct >= 60 ? 'Good progress. Review the ones you missed below.' : 'Keep going. Read the lessons for the weak modules, then retry.'}</p>
           <table class="summary">${Object.entries(mods).map(([k, v]) => `<tr><th>${esc(modOf(k).title)}</th><td>${v.r}/${v.n}<div class="meter"><span style="width:${Math.round((100 * v.r) / v.n)}%"></span></div></td></tr>`).join('')}</table>
           <div class="row gap">${missed.length ? '<button class="btn primary" id="retry">Retry the ones I missed</button>' : ''}<button class="btn" id="home2">Home</button></div>
@@ -317,6 +338,42 @@ LEARNER'S ENVIRONMENT: ${V.ENV_SUMMARY}`;
       $('#back').onclick = () => go(challengeList);
     }
     render();
+  }
+
+  // ---------- cheat sheet ----------
+  function cheatSheet() {
+    const row = (a, b) => `<tr><th>${a}</th><td>${b}</td></tr>`;
+    show(`
+      <section class="card cheat">
+        <p class="kicker">Read this 10 minutes before the call</p>
+        <h1>Cheat sheet</h1>
+        <h2>My environment in one breath</h2>
+        <p class="lead">About 50 ESXi 8.0 U3 hosts (HPE DL380, Dell R640/R740) in 9 clusters under vCenter 8.0 U3, HA and DRS on. About 1,100 running VMs, roughly 55% Linux, 45% Windows Server. Hitachi FC SAN, 307 VMFS datastores, 2 paths per LUN, Round Robin. Distributed switches on 10GbE.</p>
+        <h2>Numbers to know</h2>
+        <table class="summary">
+          ${row('CPU Ready', 'Above ~5% per vCPU = VMs waiting for cores')}
+          ${row('Disk latency', 'Under ~20 ms fine, 30 ms+ is a problem. GAVG ≈ DAVG (device) + KAVG (ESXi queue)')}
+          ${row('Memory', 'Ballooning = host short of RAM. Swapping = much worse')}
+          ${row('Admission control', 'Failover level 1 = keep one host free. 2-host cluster ≈ 50% usable')}
+          ${row('Snapshots', 'Hours to days, never a backup. Old ones = big delta, slow I/O')}
+          ${row('vSphere support', '9.1 latest · 9.0 to Sep 2027 · 8.0 to 11 Oct 2027 · 7.0 ended 2 Oct 2025')}
+          ${row('esxtop keys', 'c CPU (%RDY, %CSTP) · m memory (MCTLSZ, SWCUR) · d/u/v disk · n network')}
+        </table>
+        <h2>"Why is this slow?" method</h2>
+        <ol class="prose"><li>Scope: one VM or many, since when, what changed?</li><li>Guest: CPU, memory, disk latency (perfmon Avg. Disk sec/Transfer), network.</li><li>VM in vCenter: CPU Ready, ballooning/swapping, limits, snapshots, disk latency.</li><li>Shared? Same host → host. Same datastore → storage. Neither → something shared (DNS, AD, network, backups).</li><li>Fix, then prove it with the same metric.</li></ol>
+        <h2>Classic answers</h2>
+        <ul class="prose">
+          <li><strong>HA vs DRS vs vMotion:</strong> vMotion moves a running VM; DRS uses vMotion to balance; HA restarts VMs after a host dies.</li>
+          <li><strong>Over-sized VM:</strong> more vCPUs can be slower (CPU Ready, NUMA). Right-size from data.</li>
+          <li><strong>Limits:</strong> apply even when the host is idle. Check them when a VM swaps on a host with free RAM.</li>
+          <li><strong>VMFS 5 → 6:</strong> no in-place upgrade. New datastore, Storage vMotion, retire old LUN.</li>
+          <li><strong>vSphere 9:</strong> ESX name, vLCM images only, vCenter 9 manages ESX 8.0+. Upgrade vCenter first.</li>
+          <li><strong>Don't know?</strong> Say so, then say how you would find out.</li>
+        </ul>
+        <div class="row gap"><button class="btn" id="pr">Print</button><button class="btn primary" id="back">← Home</button></div>
+      </section>`, 'Cheat sheet');
+    $('#pr').onclick = () => window.print();
+    $('#back').onclick = () => go(home);
   }
 
   // ---------- my environment ----------
