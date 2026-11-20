@@ -64,6 +64,7 @@ A second app in this repo, with the same look and the same DeepSeek coach: learn
 - **7 lessons:** hardware, vSphere and clusters, storage, networking, VMs and housekeeping, performance, and "my environment".
 - **86 quiz questions** (options shuffled every time), with an explanation after each one. Quiz by module, mixed, **weak spots** (what you got wrong), or a 20-question **interview round** with no hints.
 - **20 scenario challenges:** write your answer, get an AI review, then tick the points of a rubric and compare with the model answer.
+- **11 interactive diagrams** inside the lessons and in the **Visual lab**: tap parts of a server, drag NUMA/CPU/datastore/snapshot sliders, fail a host, a storage path or a network uplink and watch what survives, and walk a "the VM is slow" decision tree.
 - **AI coach** on every lesson, question and challenge. It guides before you answer and explains fully after. A free **tutor** page can run a mock interview.
 - **My environment:** the headline numbers to learn by heart. Hostnames, IPs and company names are left out on purpose (this repo is public).
 - Progress is saved only in your browser (⚙ Settings to reset).

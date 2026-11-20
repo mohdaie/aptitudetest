@@ -72,6 +72,7 @@ LEARNER'S ENVIRONMENT: ${V.ENV_SUMMARY}`;
           <button class="btn" data-act="weak">Weak spots</button>
           <button class="btn" data-act="exam">Interview round (20, no hints)</button>
           <button class="btn" data-act="challenges">Scenario challenges</button>
+          <button class="btn" data-act="lab">Visual lab (interactive diagrams)</button>
           <button class="btn" data-act="env">My environment</button>
           <button class="btn" data-act="tutor">Ask the tutor</button>
         </div>
@@ -90,7 +91,23 @@ LEARNER'S ENVIRONMENT: ${V.ENV_SUMMARY}`;
     bindCoachCard();
     $$('[data-lesson]').forEach((b) => (b.onclick = () => go(lesson, b.dataset.lesson)));
     $$('[data-quiz]').forEach((b) => (b.onclick = () => go(startModuleQuiz, b.dataset.quiz)));
-    $$('[data-act]').forEach((b) => (b.onclick = () => go(({ mixed: startMixed, weak: startWeak, exam: startExam, challenges: challengeList, env: envPage, tutor: tutorPage })[b.dataset.act])));
+    $$('[data-act]').forEach((b) => (b.onclick = () => go(({ mixed: startMixed, weak: startWeak, exam: startExam, challenges: challengeList, env: envPage, tutor: tutorPage, lab })[b.dataset.act])));
+  }
+
+  // ---------- interactive diagrams ----------
+  function mountWidgets(root = app) {
+    $$('.wmount', root).forEach((el) => { const fn = V.WIDGETS[el.dataset.w]; if (fn) { try { fn(el); } catch (e) { el.textContent = 'Diagram could not load.'; } } });
+  }
+  function lab() {
+    const ids = Object.keys(V.WIDGETS);
+    show(`
+      <section class="card"><p class="kicker">Visual lab</p><h1>Learn by touching</h1><p class="lead">Interactive diagrams. Tap parts, drag sliders, and break things to see what happens.</p>
+        <div class="chips">${ids.map((id) => `<a class="chip" href="#w-${id}" data-jump="${id}">${esc(V.WIDGET_TITLES[id].split(' (')[0])}</a>`).join('')}</div></section>
+      ${ids.map((id) => `<section class="card" id="w-${id}"><div class="wmount" data-w="${id}"></div></section>`).join('')}
+      <div class="nav"><button class="btn" id="back">← Home</button><span></span></div>`, 'Visual lab');
+    mountWidgets();
+    $$('[data-jump]').forEach((a) => (a.onclick = (e) => { e.preventDefault(); const t = $('#w-' + a.dataset.jump); if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' }); }));
+    $('#back').onclick = () => go(home);
   }
 
   // ---------- lesson ----------
@@ -104,12 +121,13 @@ LEARNER'S ENVIRONMENT: ${V.ENV_SUMMARY}`;
         <h1>${m.icon} ${esc(m.title)}</h1>
         <p class="lead">${esc(L.intro)}</p>
       </section>
-      ${L.sections.map((s) => `<section class="card"><h2>${esc(s.t)}</h2><div class="prose">${s.h}</div></section>`).join('')}
+      ${L.sections.map((s) => `<section class="card"><h2>${esc(s.t)}</h2><div class="prose">${s.h}</div>${s.w ? `<div class="wmount" data-w="${s.w}"></div>` : ''}</section>`).join('')}
       <section class="card yours"><p class="kicker">In your environment</p><p>${esc(L.yours)}</p></section>
       <section class="card"><h2>Key terms</h2><table class="summary">${L.terms.map(([a, b]) => `<tr><th>${esc(a)}</th><td>${esc(b)}</td></tr>`).join('')}</table></section>
       <div id="coach"></div>
       <div class="nav"><button class="btn" id="back">← Home</button><button class="btn primary" id="quiz">Take the ${esc(m.title)} quiz</button></div>
       ${next ? `<p class="center muted small"><button class="link" id="next">Next module: ${esc(next.title)} →</button></p>` : ''}`, m.title);
+    mountWidgets();
     const lessonText = `${m.title}. ${L.intro} ` + L.sections.map((s) => `${s.t}: ${plain(s.h)}`).join(' ') + ' In their environment: ' + L.yours;
     C.mount($('#coach'), {
       id: 'lesson-' + mod, title: 'Ask about this lesson', intro: 'Ask anything about this module. I will explain it in simple words and link it to your environment.',
@@ -313,6 +331,7 @@ LEARNER'S ENVIRONMENT: ${V.ENV_SUMMARY}`;
           <tr><th>Network</th><td>${esc(E.network.speed)}; ${E.network.dvs} distributed switches; ${esc(E.network.vss)}; ${esc(E.network.vmk)}</td></tr>
         </table>
       </section>
+      <section class="card"><div class="wmount" data-w="envmap"></div></section>
       <section class="card"><h2>Clusters</h2><table class="summary">${E.clusters.map((c) => `<tr><th>${esc(c.name)}</th><td>${c.hosts} hosts${c.note ? ` · <span class="muted">${esc(c.note)}</span>` : ''}</td></tr>`).join('')}</table></section>
       <section class="card"><h2>Hardware</h2><div class="scrollx"><table class="summary wide"><tr><th>Hosts</th><th>Model</th><th>CPU</th><th>Cores</th><th>RAM</th></tr>${E.hardware.map((h) => `<tr><td>${h.n}</td><td>${esc(h.model)}</td><td>${esc(h.cpu)}</td><td>${h.cores}</td><td>${esc(h.ram)}</td></tr>`).join('')}</table></div></section>
       <section class="card"><h2>Things worth fixing (and talking about)</h2><ul class="prose">
@@ -327,6 +346,7 @@ LEARNER'S ENVIRONMENT: ${V.ENV_SUMMARY}`;
         <li><strong>${S.empty} empty datastores</strong>, lowest at ${esc(S.lowest)}.</li>
         <li>vMotion probably shares the management network (confirm in vCenter).</li></ul></section>
       <div class="nav"><button class="btn" id="back">← Home</button><button class="btn primary" id="q">Quiz me on my environment</button></div>`, 'My environment');
+    mountWidgets();
     $('#back').onclick = () => go(home);
     $('#q').onclick = () => go(startModuleQuiz, 'm7');
   }
