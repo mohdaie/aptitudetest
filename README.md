@@ -54,3 +54,18 @@ You can tick or untick sections on the start screen to practise only some of the
 - `scratch.js`: pen scratch paper
 - `app.js`: test engine (timers, memory tasks, visual question generator, results)
 - `styles.css`: styling, with light and dark modes
+
+## VMware prep (`vmware/`)
+
+A second app in this repo, with the same look and the same DeepSeek coach: learn VMware vSphere, storage and server hardware from the basics, using one real environment as the example.
+
+**Run it:** open `vmware/index.html`, or on GitHub Pages go to `/vmware/`. It shares your saved DeepSeek key with the aptitude test.
+
+- **7 lessons:** hardware, vSphere and clusters, storage, networking, VMs and housekeeping, performance, and "my environment".
+- **86 quiz questions** (options shuffled every time), with an explanation after each one. Quiz by module, mixed, **weak spots** (what you got wrong), or a 20-question **interview round** with no hints.
+- **20 scenario challenges:** write your answer, get an AI review, then tick the points of a rubric and compare with the model answer.
+- **AI coach** on every lesson, question and challenge. It guides before you answer and explains fully after. A free **tutor** page can run a mock interview.
+- **My environment:** the headline numbers to learn by heart. Hostnames, IPs and company names are left out on purpose (this repo is public).
+- Progress is saved only in your browser (⚙ Settings to reset).
+
+Files: `vmware/data-lessons.js` (lessons and environment facts), `data-questions.js` (question bank, correct answer listed first), `data-challenges.js` (scenarios), `coach.js`, `app.js`, `vmware.css`.
