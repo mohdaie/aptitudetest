@@ -143,7 +143,7 @@ LEARNER'S ENVIRONMENT: ${V.ENV_SUMMARY}`;
   // ---------- quizzes ----------
   const build = (q) => {
     const opts = shuffle(q.opts.map((t, k) => ({ t, ok: k === 0 })));
-    return { id: q.id, mod: q.mod, q: q.q, why: q.why, opts: opts.map((o) => o.t), answer: opts.findIndex((o) => o.ok), picked: null, locked: false };
+    return { id: q.id, mod: q.mod, q: q.q, why: q.why, fig: q.fig, figAfter: q.figAfter, opts: opts.map((o) => o.t), answer: opts.findIndex((o) => o.ok), picked: null, locked: false };
   };
   function startModuleQuiz(mod) { const m = modOf(mod); runQuiz({ title: m.title, qs: shuffle(V.QUESTIONS.filter((q) => q.mod === mod)).slice(0, 12) }); }
   function startMixed() { runQuiz({ title: 'Mixed quiz', qs: pickSet(V.QUESTIONS, 10) }); }
@@ -170,11 +170,15 @@ LEARNER'S ENVIRONMENT: ${V.ENV_SUMMARY}`;
       return `${BASE}\n\nQUIZ QUESTION (${modOf(it.mod).title}): ${it.q}\nOPTIONS\n${opts}\n\nHIDDEN, FOR YOU ONLY: the correct answer is ${LETTERS[it.answer]}. Official explanation: ${it.why}\n\n${status}\nWhen the learner shares reasoning: say what is right, point to the first step that goes wrong, end with one guiding question. When they are stuck: give the smallest useful nudge.`;
     };
 
+    const figHTML = (it) => {
+      const id = it.locked && it.figAfter ? null : it.fig; // after checking, the labelled picture is shown in the feedback instead
+      return id && V.FIGS[id] ? `<div class="qfig">${V.FIGS[id]()}</div>` : '';
+    };
     function render() {
       const it = items[i];
       const last = i === items.length - 1;
       const verdict = it.locked
-        ? `<div class="feedback ${it.picked === it.answer ? 'ok' : 'bad'}"><p class="verdict">${it.picked === it.answer ? '✅ Correct!' : `❌ Not quite. The answer is <strong>${LETTERS[it.answer]}</strong>.`}</p><p>${esc(it.why)}</p></div>` : '';
+        ? `<div class="feedback ${it.picked === it.answer ? 'ok' : 'bad'}"><p class="verdict">${it.picked === it.answer ? '✅ Correct!' : `❌ Not quite. The answer is <strong>${LETTERS[it.answer]}</strong>.`}</p><p>${esc(it.why)}</p>${it.figAfter && V.FIGS[it.figAfter] ? `<div class="qfig after">${V.FIGS[it.figAfter]()}</div>` : ''}</div>` : '';
       let nav;
       if (exam) nav = `<button class="btn" id="prev" ${i === 0 ? 'disabled' : ''}>← Back</button><button class="btn primary" id="next">${last ? 'Finish' : 'Next →'}</button>`;
       else if (!it.locked) nav = `<button class="btn" id="skip">Skip</button><button class="btn primary" id="check" ${it.picked === null ? 'disabled' : ''}>Check answer</button>`;
@@ -183,6 +187,7 @@ LEARNER'S ENVIRONMENT: ${V.ENV_SUMMARY}`;
         <section class="card qcard">
           <p class="kicker">${esc(title)} · Question ${i + 1} of ${items.length}${modOf(it.mod).title === title ? '' : ' · ' + esc(modOf(it.mod).title)}</p>
           <div class="qtext">${esc(it.q)}</div>
+          ${figHTML(it)}
           <div class="options">${it.opts.map((o, k) => {
             let cls = it.picked === k ? 'sel' : '';
             if (it.locked) cls = k === it.answer ? 'right' : it.picked === k ? 'wrong' : '';
@@ -235,7 +240,7 @@ LEARNER'S ENVIRONMENT: ${V.ENV_SUMMARY}`;
           <table class="summary">${Object.entries(mods).map(([k, v]) => `<tr><th>${esc(modOf(k).title)}</th><td>${v.r}/${v.n}<div class="meter"><span style="width:${Math.round((100 * v.r) / v.n)}%"></span></div></td></tr>`).join('')}</table>
           <div class="row gap">${missed.length ? '<button class="btn primary" id="retry">Retry the ones I missed</button>' : ''}<button class="btn" id="home2">Home</button></div>
         </section>
-        ${missed.length ? `<h3 class="sect">Review what you missed</h3>${missed.map((x) => `<details class="rev bad"><summary>${esc(x.q)}</summary><p><strong>Answer:</strong> ${esc(x.opts[x.answer])}</p><p><strong>You chose:</strong> ${x.picked === null ? 'no answer' : esc(x.opts[x.picked])}</p><p>${esc(x.why)}</p></details>`).join('')}` : ''}`, title);
+        ${missed.length ? `<h3 class="sect">Review what you missed</h3>${missed.map((x) => `<details class="rev bad"><summary>${esc(x.q)}</summary><p><strong>Answer:</strong> ${esc(x.opts[x.answer])}</p><p><strong>You chose:</strong> ${x.picked === null ? 'no answer' : esc(x.opts[x.picked])}</p><p>${esc(x.why)}</p>${x.figAfter && V.FIGS[x.figAfter] ? `<div class="qfig after">${V.FIGS[x.figAfter]()}</div>` : x.fig && V.FIGS[x.fig] ? `<div class="qfig after">${V.FIGS[x.fig]()}</div>` : ''}</details>`).join('')}` : ''}`, title);
       const r = $('#retry'); if (r) r.onclick = () => go(() => runQuiz({ title: 'Retry', qs: missed.map((x) => V.QUESTIONS.find((q) => q.id === x.id)) }));
       $('#home2').onclick = () => go(home);
     }
